@@ -4,7 +4,7 @@
  *  Copyright (C) 1991, 1992  Linus Torvalds
  */
 
-#include <linux/slab.h> 
+#include <linux/slab.h>
 #include <linux/stat.h>
 #include <linux/fcntl.h>
 #include <linux/file.h>
@@ -340,7 +340,7 @@ ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *pp
 	kiocb.ki_pos = *ppos;
 	kiocb.ki_left = len;
 	kiocb.ki_nbytes = len;
-
+    //iov 可以是不连续的buf 同时读写。这里仅仅是一个buffer
 	ret = filp->f_op->aio_read(&kiocb, &iov, 1, kiocb.ki_pos);
 	if (-EIOCBQUEUED == ret)
 		ret = wait_on_sync_kiocb(&kiocb);
@@ -349,7 +349,7 @@ ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *pp
 }
 
 EXPORT_SYMBOL(do_sync_read);
-
+//read write 接口都是同步的
 ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
 	ssize_t ret;
@@ -365,9 +365,9 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 	if (ret >= 0) {
 		count = ret;
 		if (file->f_op->read)
-			ret = file->f_op->read(file, buf, count, pos);
+			ret = file->f_op->read(file, buf, count, pos);//同步读,文件系统的读接口，大部分也是do_sync_read
 		else
-			ret = do_sync_read(file, buf, count, pos);
+			ret = do_sync_read(file, buf, count, pos);//通过异步完成同步读
 		if (ret > 0) {
 			fsnotify_access(file);
 			add_rchar(current, ret);
@@ -531,7 +531,7 @@ SYSCALL_DEFINE4(pwrite64, unsigned int, fd, const char __user *, buf,
 	f = fdget(fd);
 	if (f.file) {
 		ret = -ESPIPE;
-		if (f.file->f_mode & FMODE_PWRITE)  
+		if (f.file->f_mode & FMODE_PWRITE)
 			ret = vfs_write(f.file, buf, count, &pos);
 		fdput(f);
 	}

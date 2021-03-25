@@ -660,7 +660,8 @@ int open_check_o_direct(struct file *f)
 	}
 	return 0;
 }
-
+/*file 结构体关联inode*/
+/*旧函数名 __dentry_open*/
 static int do_dentry_open(struct file *f,
 			  int (*open)(struct inode *, struct file *),
 			  const struct cred *cred)
@@ -676,6 +677,7 @@ static int do_dentry_open(struct file *f,
 		f->f_mode = FMODE_PATH;
 
 	path_get(&f->f_path);
+    /*设置file中inode*/
 	inode = f->f_inode = f->f_path.dentry->d_inode;
 	if (f->f_mode & FMODE_WRITE) {
 		error = __get_file_write_access(inode, f->f_path.mnt);
@@ -685,7 +687,7 @@ static int do_dentry_open(struct file *f,
 			file_take_write(f);
 	}
 
-	f->f_mapping = inode->i_mapping;
+	f->f_mapping = inode->i_mapping;/*设置页缓存*/
 	file_sb_list_add(f, inode->i_sb);
 
 	if (unlikely(f->f_mode & FMODE_PATH)) {
@@ -693,7 +695,7 @@ static int do_dentry_open(struct file *f,
 		return 0;
 	}
 
-	f->f_op = fops_get(inode->i_fop);
+	f->f_op = fops_get(inode->i_fop);/*从inode中获取file_operations*/
 
 	error = security_file_open(f, cred);
 	if (error)
@@ -706,7 +708,7 @@ static int do_dentry_open(struct file *f,
 	if (!open && f->f_op)
 		open = f->f_op->open;
 	if (open) {
-		error = open(inode, f);
+		error = open(inode, f);/*执行具体文件系统打开操作*/
 		if (error)
 			goto cleanup_all;
 	}
@@ -797,7 +799,7 @@ struct file *dentry_open(const struct path *path, int flags,
 	/* We must always pass in a valid mount pointer. */
 	BUG_ON(!path->mnt);
 
-	f = get_empty_filp();
+	f = get_empty_filp(); /*创建file 结构体*/
 	if (!IS_ERR(f)) {
 		f->f_flags = flags;
 		f->f_path = *path;
@@ -809,7 +811,7 @@ struct file *dentry_open(const struct path *path, int flags,
 				fput(f);
 				f = ERR_PTR(error);
 			}
-		} else { 
+		} else {
 			put_filp(f);
 			f = ERR_PTR(error);
 		}

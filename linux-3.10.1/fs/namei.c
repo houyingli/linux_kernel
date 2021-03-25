@@ -48,8 +48,8 @@
  * The new code replaces the old recursive symlink resolution with
  * an iterative one (in case of non-nested symlink chains).  It does
  * this with calls to <fs>_follow_link().
- * As a side effect, dir_namei(), _namei() and follow_link() are now 
- * replaced with a single function lookup_dentry() that can handle all 
+ * As a side effect, dir_namei(), _namei() and follow_link() are now
+ * replaced with a single function lookup_dentry() that can handle all
  * the special cases of the former code.
  *
  * With the new dcache, the pathname is stored at each inode, at least as
@@ -1752,7 +1752,7 @@ static int link_path_walk(const char *name, struct nameidata *nd)
 {
 	struct path next;
 	int err;
-	
+
 	while (*name=='/')
 		name++;
 	if (!*name)
@@ -1821,7 +1821,7 @@ static int link_path_walk(const char *name, struct nameidata *nd)
 				return err;
 		}
 		if (!can_lookup(nd->inode)) {
-			err = -ENOTDIR; 
+			err = -ENOTDIR;
 			break;
 		}
 	}
@@ -2654,13 +2654,15 @@ static int lookup_open(struct nameidata *nd, struct path *path,
 		error = security_path_mknod(&nd->path, dentry, mode, 0);
 		if (error)
 			goto out_dput;
+        /*利用所在目录的目录项对象的inode operation为相关文件创建新inode　。
+        注：这里dentry与inode就关联起来了。*/
 		error = vfs_create(dir->d_inode, dentry, mode,
 				   nd->flags & LOOKUP_EXCL);
 		if (error)
 			goto out_dput;
 	}
 out_no_open:
-	path->dentry = dentry;
+	path->dentry = dentry; //建文件的目录项对象保存到nd->path->dentry
 	path->mnt = nd->path.mnt;
 	return 1;
 
@@ -2759,6 +2761,7 @@ retry_lookup:
 		 */
 	}
 	mutex_lock(&dir->d_inode->i_mutex);
+    /*打开文件*/
 	error = lookup_open(nd, path, file, op, got_write, opened);
 	mutex_unlock(&dir->d_inode->i_mutex);
 
@@ -2868,6 +2871,7 @@ finish_open_created:
 	if (error)
 		goto out;
 	file->f_path.mnt = nd->path.mnt;
+    /*将dentry 和 file 关联，以及设置file operation等操作*/
 	error = finish_open(file, nd->path.dentry, NULL, opened);
 	if (error) {
 		if (error == -EOPENSTALE)
@@ -2940,11 +2944,13 @@ static struct file *path_openat(int dfd, struct filename *pathname,
 		goto out;
 
 	current->total_link_count = 0;
+    //返回父目录的 dentry, inode
 	error = link_path_walk(pathname->name, nd);
 	if (unlikely(error))
 		goto out;
-
+    /*处理最后一个分量，一般是打开文件，将entry和inode，file结构体进行关联*/
 	error = do_last(nd, &path, file, op, &opened, pathname);
+    // 如果是链接文件
 	while (unlikely(error > 0)) { /* trailing symlink */
 		struct path link = path;
 		void *cookie;
@@ -2959,10 +2965,10 @@ static struct file *path_openat(int dfd, struct filename *pathname,
 			break;
 		nd->flags |= LOOKUP_PARENT;
 		nd->flags &= ~(LOOKUP_OPEN|LOOKUP_CREATE|LOOKUP_EXCL);
-		error = follow_link(&link, nd, &cookie);
+		error = follow_link(&link, nd, &cookie);// 遍历链接路径
 		if (unlikely(error))
 			break;
-		error = do_last(nd, &path, file, op, &opened, pathname);
+		error = do_last(nd, &path, file, op, &opened, pathname);// 处理最后的文件
 		put_link(nd, &link, cookie);
 	}
 out:
@@ -3791,7 +3797,7 @@ int vfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 
 	if (old_dentry->d_inode == new_dentry->d_inode)
  		return 0;
- 
+
 	error = may_delete(old_dir, old_dentry, is_dir);
 	if (error)
 		return error;

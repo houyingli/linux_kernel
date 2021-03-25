@@ -9,7 +9,7 @@
 struct vfsmount;
 
 enum { MAX_NESTED_LINKS = 8 };
-
+//nameidata用于保存pathwalking过程中的上下文和最后的查找结果
 struct nameidata {
 	struct path	path;
 	struct qstr	last;
@@ -19,7 +19,7 @@ struct nameidata {
 	unsigned	seq;
 	int		last_type;
 	unsigned	depth;
-	char *saved_names[MAX_NESTED_LINKS + 1];
+	char *saved_names[MAX_NESTED_LINKS + 1]; //短文件名
 };
 
 /*

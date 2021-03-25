@@ -4127,7 +4127,7 @@ static inline void ext4_iget_extra_inode(struct inode *inode,
 	} else
 		EXT4_I(inode)->i_inline_off = 0;
 }
-
+/*从超级块中查找或创建inode*/
 struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 {
 	struct ext4_iloc iloc;
@@ -4140,7 +4140,7 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 	uid_t i_uid;
 	gid_t i_gid;
 
-	inode = iget_locked(sb, ino);
+	inode = iget_locked(sb, ino);//申请inode
 	if (!inode)
 		return ERR_PTR(-ENOMEM);
 	if (!(inode->i_state & I_NEW))
@@ -4313,7 +4313,7 @@ struct inode *ext4_iget(struct super_block *sb, unsigned long ino)
 	}
 	if (ret)
 		goto bad_inode;
-
+    /*找到inode后，设置文件系统的file /inode operation 回调函数*/
 	if (S_ISREG(inode->i_mode)) {
 		inode->i_op = &ext4_file_inode_operations;
 		inode->i_fop = &ext4_file_operations;

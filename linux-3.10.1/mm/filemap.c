@@ -214,6 +214,7 @@ static int filemap_check_errors(struct address_space *mapping)
  * these two operations is that if a dirty page/buffer is encountered, it must
  * be waited upon, and not just skipped over.
  */
+ //åˆ·mappingä¸‹çš„è„é¡µ
 int __filemap_fdatawrite_range(struct address_space *mapping, loff_t start,
 				loff_t end, int sync_mode)
 {
@@ -368,6 +369,7 @@ EXPORT_SYMBOL(filemap_write_and_wait);
  * Note that `lend' is inclusive (describes the last byte to be written) so
  * that this function can be used to write to the very end-of-file (end = -1).
  */
+ //åˆ·mappingä¸‹çš„è„é¡µ
 int filemap_write_and_wait_range(struct address_space *mapping,
 				 loff_t lstart, loff_t lend)
 {
@@ -1109,11 +1111,12 @@ static void do_generic_file_read(struct file *filp, loff_t *ppos,
 	unsigned int prev_offset;
 	int error;
 
-	index = *ppos >> PAGE_CACHE_SHIFT;
-	prev_index = ra->prev_pos >> PAGE_CACHE_SHIFT;
-	prev_offset = ra->prev_pos & (PAGE_CACHE_SIZE-1);
+	index = *ppos >> PAGE_CACHE_SHIFT; // æœ¬æ¬¡è¯»é¡µç´¢å¼•ï¼Œåœ¨é¡µç¼“å­˜ä¸­ç¬¬å‡ ä¸ªé¡µå†…
+	prev_index = ra->prev_pos >> PAGE_CACHE_SHIFT;//è¡¨ç¤ºä¸Šä¸€æ¬¡çš„é¢„è¯»ä¹‹åŽçš„é¡µåç§»
+	prev_offset = ra->prev_pos & (PAGE_CACHE_SIZE-1);//è¡¨ç¤ºä¸Šä¸€æ¬¡çš„é¢„è¯»ä¹‹åŽçš„é¡µå†…åç§»
+	//è¦è¯»çš„æœ€åŽä¸€ä¸ªå­—èŠ‚ä½äºŽ address_space ä¸­çš„é¡µåç§»
 	last_index = (*ppos + desc->count + PAGE_CACHE_SIZE-1) >> PAGE_CACHE_SHIFT;
-	offset = *ppos & ~PAGE_CACHE_MASK;
+	offset = *ppos & ~PAGE_CACHE_MASK;// ä¸šå†…åç§»
 
 	for (;;) {
 		struct page *page;
@@ -1123,21 +1126,21 @@ static void do_generic_file_read(struct file *filp, loff_t *ppos,
 
 		cond_resched();
 find_page:
-		page = find_get_page(mapping, index);
-		if (!page) {
+		page = find_get_page(mapping, index); //ä»ŽåŸºæ•°æ ‘ä¸­æŸ¥æ‰¾é¡µ
+		if (!page) {//å¦‚æžœæ²¡æ‰¾åˆ°ï¼Œåˆ™éœ€è¦åŒæ­¥è¯»ï¼Œè¿™é‡Œé‡‡ç”¨åŒæ­¥é¢„è¯»
 			page_cache_sync_readahead(mapping,
 					ra, filp,
 					index, last_index - index);
-			page = find_get_page(mapping, index);
+			page = find_get_page(mapping, index);// é¢„è¯»ç»“æŸåŽpageåº”è¯¥åŠ å…¥åˆ°åŸºæ•°æ ‘ä¸­
 			if (unlikely(page == NULL))
 				goto no_cached_page;
 		}
-		if (PageReadahead(page)) {
+		if (PageReadahead(page)) { // page_cache_sync_readahead ä¸­è®¾ç½®äº†é¢„è¯»,ç»§ç»­å¼‚æ­¥é¢„è¯»
 			page_cache_async_readahead(mapping,
 					ra, filp, page,
 					index, last_index - index);
 		}
-		if (!PageUptodate(page)) {
+		if (!PageUptodate(page)) { //å¦‚æžœä¸æ˜¯æœ€æ–°çš„,æ¯”å¦‚æœ‰å†™æ“ä½œï¼Œä½†è¿˜æ²¡æœ‰åŒæ­¥åˆ°ç›˜ä¸Š
 			if (inode->i_blkbits == PAGE_CACHE_SHIFT ||
 					!mapping->a_ops->is_partially_uptodate)
 				goto page_not_up_to_date;
@@ -1151,6 +1154,7 @@ find_page:
 				goto page_not_up_to_date_locked;
 			unlock_page(page);
 		}
+        // å¦‚æžœæ˜¯æœ€æ–°çš„
 page_ok:
 		/*
 		 * i_size must be checked after we know the page is Uptodate.
@@ -1394,7 +1398,7 @@ EXPORT_SYMBOL(generic_segment_checks);
  * generic_file_aio_read - generic filesystem read routine
  * @iocb:	kernel I/O control block
  * @iov:	io vector request
- * @nr_segs:	number of segments in the iovec
+ * @nr_segs:	number of segments in the iovec, å¯ä»¥ä¸€æ¬¡è¯»å–å¤šä¸ªbuf
  * @pos:	current file position
  *
  * This is the "read()" routine for all filesystems
@@ -1416,7 +1420,7 @@ generic_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 		return retval;
 
 	/* coalesce the iovecs and go direct-to-BIO for O_DIRECT */
-	if (filp->f_flags & O_DIRECT) {
+	if (filp->f_flags & O_DIRECT) {//å¦‚æžœæ˜¯directIO åˆ™ç»•è¿‡é¡µç¼“å­˜
 		loff_t size;
 		struct address_space *mapping;
 		struct inode *inode;
@@ -1427,9 +1431,11 @@ generic_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 			goto out; /* skip atime */
 		size = i_size_read(inode);
 		if (pos < size) {
+            //å…ˆä¸‹åˆ·è„é¡µ
 			retval = filemap_write_and_wait_range(mapping, pos,
 					pos + iov_length(iov, nr_segs) - 1);
 			if (!retval) {
+                //ç›´æŽ¥ä»Žè®¾å¤‡ä¸­è¯»å–
 				retval = mapping->a_ops->direct_IO(READ, iocb,
 							iov, pos, nr_segs);
 			}
@@ -1504,7 +1510,7 @@ EXPORT_SYMBOL(generic_file_aio_read);
 static int page_cache_read(struct file *file, pgoff_t offset)
 {
 	struct address_space *mapping = file->f_mapping;
-	struct page *page; 
+	struct page *page;
 	int ret;
 
 	do {
@@ -1521,7 +1527,7 @@ static int page_cache_read(struct file *file, pgoff_t offset)
 		page_cache_release(page);
 
 	} while (ret == AOP_TRUNCATED_PAGE);
-		
+
 	return ret;
 }
 
@@ -2340,8 +2346,8 @@ again:
 			status = -EFAULT;
 			break;
 		}
-		/* µ÷ÓÃext3ÖÐµÄwrite_beginº¯Êý£¨inode.cÖÐ£©ext3_write_begin£¬ 
-		Èç¹ûÐ´ÈëµÄpageÒ³²»´æÔÚ£¬ÄÇÃ´ext3_write_begin»á´´½¨Ò»¸öPageÒ³£¬È»ºó´ÓÓ²ÅÌÖÐ¶ÁÈëÏàÓ¦µÄÊý¾Ý */ 
+		/* µ÷ÓÃext3ÖÐµÄwrite_beginº¯Êý£¨inode.cÖÐ£©ext3_write_begin£¬
+		Èç¹ûÐ´ÈëµÄpageÒ³²»´æÔÚ£¬ÄÇÃ´ext3_write_begin»á´´½¨Ò»¸öPageÒ³£¬È»ºó´ÓÓ²ÅÌÖÐ¶ÁÈëÏàÓ¦µÄÊý¾Ý */
 		status = a_ops->write_begin(file, mapping, pos, bytes, flags,
 						&page, &fsdata);
 		if (unlikely(status))
@@ -2351,13 +2357,13 @@ again:
 			flush_dcache_page(page);
 
 		pagefault_disable();
-		/* ½«Êý¾Ý¿½±´µ½page cacheÖÐ */ 
+		/* ½«Êý¾Ý¿½±´µ½page cacheÖÐ */
 		copied = iov_iter_copy_from_user_atomic(page, i, offset, bytes);
 		pagefault_enable();
 		flush_dcache_page(page);
 
 		mark_page_accessed(page);
-		/* µ÷ÓÃext3µÄwrite_endº¯Êý£¨inode.cÖÐ£©£¬Ð´ÍêÊý¾ÝÖ®ºó»á½«pageÒ³±êÊ¶Îªdirty£¬ºóÌ¨writebackÏß³Ì»á½«dirty pageË¢ÐÂµ½Éè±¸ */  
+		/* µ÷ÓÃext3µÄwrite_endº¯Êý£¨inode.cÖÐ£©£¬Ð´ÍêÊý¾ÝÖ®ºó»á½«pageÒ³±êÊ¶Îªdirty£¬ºóÌ¨writebackÏß³Ì»á½«dirty pageË¢ÐÂµ½Éè±¸ */
 		status = a_ops->write_end(file, mapping, pos, bytes, copied,
 						page, fsdata);
 		if (unlikely(status < 0))
@@ -2409,7 +2415,7 @@ generic_file_buffered_write(struct kiocb *iocb, const struct iovec *iov,
 		written += status;
 		*ppos = pos + status;
   	}
-	
+
 	return written ? written : status;
 }
 EXPORT_SYMBOL(generic_file_buffered_write);
